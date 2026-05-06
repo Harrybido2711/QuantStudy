@@ -1,0 +1,96 @@
+---
+title: "LLM Inference Optimization: KV-Cache, Quantization, and Batching"
+date: "2026-05-01"
+tags: ["llm", "systems", "ai", "machine-learning"]
+description: "A deep dive into the techniques that make large language model inference practical at scale."
+---
+
+## Why Inference Is Hard
+
+Training a large language model is compute-bound — you throw GPUs at it and wait. **Inference**, however, is memory-bandwidth-bound. Every forward pass loads the full weight matrix from HBM (High Bandwidth Memory) into the compute units. For a 70B parameter model in FP16, that's ~140 GB of weights per token.
+
+The key metric is **arithmetic intensity**: FLOPs / bytes of memory traffic. When this is low (as in inference), we're bottlenecked on memory bandwidth, not raw compute.
+
+---
+
+## KV-Cache
+
+The **KV-Cache** is the single most impactful optimization for autoregressive generation.
+
+During generation, each new token attends to all previous tokens. Without caching:
+
+$$
+\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V
+$$
+
+We'd recompute $K$ and $V$ for every previous token at each step. With KV-Cache, we store these tensors and only compute new $Q$, $K$, $V$ for the incoming token.
+
+**Memory cost** of KV-Cache:
+
+$$
+\text{Memory} = 2 \times n_\text{layers} \times n_\text{heads} \times d_\text{head} \times \text{seq\_len} \times \text{batch} \times \text{dtype\_bytes}
+$$
+
+For LLaMA-3 70B with seq_len=8192, batch=32 in FP16 → ~**256 GB** of KV-Cache alone.
+
+---
+
+## Quantization
+
+Quantization reduces weight precision to decrease memory footprint and increase throughput.
+
+| Method | Bits | Quality Loss | Speedup |
+|--------|------|-------------|---------|
+| FP16   | 16   | None         | Baseline |
+| INT8   | 8    | Minimal      | 1.5–2×   |
+| INT4   | 4    | Moderate     | 2–4×     |
+| GPTQ   | 4    | Low          | 3–4×     |
+| AWQ    | 4    | Very Low     | 3–4×     |
+
+**AWQ (Activation-aware Weight Quantization)** identifies that ~1% of weights are salient for output quality and preserves them in higher precision.
+
+```python
+from awq import AutoAWQForCausalLM
+
+model = AutoAWQForCausalLM.from_pretrained("meta-llama/Llama-3-70B")
+model.quantize(tokenizer, quant_config={"zero_point": True, "q_group_size": 128, "w_bit": 4})
+```
+
+---
+
+## Continuous Batching
+
+Traditional batching waits for a full batch before starting. **Continuous batching** (PagedAttention + vLLM) allows new requests to join in-flight, treating the model as a streaming service rather than a batch processor.
+
+This is the core insight behind **vLLM** — using paged memory management (analogous to OS virtual memory) to pack KV-Cache blocks efficiently.
+
+```
+Request A: [KKKKK.......] ← shorter, done early
+Request B: [KKKKKKKKKKK] ← longer, still running
+Request C: [inserted mid-flight]
+```
+
+---
+
+## Speculative Decoding
+
+Use a small "draft" model to generate $k$ tokens speculatively, then verify with the large model in parallel. Acceptance rate $\alpha$ determines speedup:
+
+$$
+\text{Speedup} \approx \frac{1 + \alpha k}{1 + k \cdot \frac{T_\text{large}}{T_\text{small}}}
+$$
+
+In practice, $\alpha \approx 0.8$ for in-distribution text → **2–3× speedup** with no quality loss.
+
+---
+
+## Summary
+
+| Technique | Memory Reduction | Throughput Gain |
+|-----------|-----------------|----------------|
+| KV-Cache  | N/A             | ~10× vs naive   |
+| INT4 Quant| 4× weights      | 3–4×           |
+| Continuous Batching | — | 2–4× GPU util  |
+| Speculative Decoding | — | 2–3×         |
+
+The frontier systems combine all of these simultaneously.

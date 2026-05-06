@@ -1,0 +1,65 @@
+---
+title: "Market Microstructure Basics"
+date: "2026-05-01"
+tags: ["quant", "trading", "finance"]
+description: "Order types, bid-ask spread, market impact, and the mechanics of how prices are set."
+---
+
+## The Order Book
+
+An **order book** is a real-time list of buy (bid) and sell (ask) orders at different price levels.
+
+```
+Ask side (sellers):
+  $100.05 × 500
+  $100.02 × 200  ← best ask
+Spread: $0.02
+  $100.00 × 300  ← best bid
+  $99.98  × 1000
+Bid side (buyers)
+```
+
+The **bid-ask spread** is the difference between best ask and best bid. It represents the cost of immediacy.
+
+## Order Types
+
+| Order | Execution | Risk |
+|-------|-----------|------|
+| **Market Order** | Immediate, best available price | Market impact, slippage |
+| **Limit Order** | Only at specified price or better | May not fill (non-execution risk) |
+| **Stop Order** | Triggers market order at stop price | Slippage past stop level |
+| **Iceberg Order** | Shows only partial quantity | Reduced market impact |
+
+## Bid-Ask Spread Decomposition
+
+The spread compensates market makers for:
+
+$$
+\text{Spread} = \text{Adverse Selection Cost} + \text{Inventory Cost} + \text{Operating Cost}
+$$
+
+**Adverse selection**: Trading against informed traders who know something you don't.
+
+## Market Impact
+
+When you execute a large order, you move the price against yourself. The **price impact** model:
+
+$$
+\Delta P = \sigma \cdot \sqrt{\frac{Q}{ADV}} \cdot \eta
+$$
+
+Where:
+- $Q$ = order quantity
+- $ADV$ = average daily volume
+- $\sigma$ = daily volatility
+- $\eta$ = market impact coefficient (~0.1–0.5)
+
+## Implementation Shortfall
+
+The total cost of trading vs. the arrival price:
+
+$$
+IS = \underbrace{(\bar{P}_\text{exec} - P_\text{arrival}) \cdot Q}_\text{market impact} + \underbrace{(\text{signed timing moves})}_\text{timing risk}
+$$
+
+Optimal execution (TWAP vs VWAP vs Almgren-Chriss) trades off market impact against timing risk.

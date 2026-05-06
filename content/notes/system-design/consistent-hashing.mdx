@@ -1,0 +1,80 @@
+---
+title: "Consistent Hashing"
+date: "2026-05-01"
+tags: ["systems", "distributed-systems", "software-engineering"]
+description: "A technique for distributing keys across nodes such that adding/removing nodes minimizes key remapping."
+---
+
+## The Problem
+
+In a naive hash-based distribution:
+
+$$
+\text{node} = \text{hash}(key) \bmod N
+$$
+
+When $N$ changes (node added/removed), **almost all keys** remap — causing a thundering herd of cache misses or data migrations.
+
+## Consistent Hashing
+
+Map both keys and nodes to a **virtual ring** (hash space $[0, 2^{32})$):
+
+```
+        0
+      /   \
+   Node A   Node B
+    ↑          ↓
+  2^32/4    2^32/2
+      \   /
+      Node C
+        ↓
+      3×2^32/4
+```
+
+A key is assigned to the **first node clockwise** from its hash position.
+
+**Adding a node**: Only the keys between the new node and its predecessor remap — $O(K/N)$ keys instead of $O(K)$.
+
+## Virtual Nodes
+
+Real implementations add each physical node as $V$ virtual nodes on the ring:
+
+```python
+import hashlib
+from bisect import bisect, insort
+
+class ConsistentHashRing:
+    def __init__(self, replicas: int = 150):
+        self.replicas = replicas
+        self.ring: list[int] = []
+        self.nodes: dict[int, str] = {}
+
+    def add_node(self, node: str):
+        for i in range(self.replicas):
+            h = int(hashlib.md5(f"{node}:{i}".encode()).hexdigest(), 16)
+            insort(self.ring, h)
+            self.nodes[h] = node
+
+    def get_node(self, key: str) -> str:
+        h = int(hashlib.md5(key.encode()).hexdigest(), 16)
+        idx = bisect(self.ring, h) % len(self.ring)
+        return self.nodes[self.ring[idx]]
+```
+
+More virtual nodes → more uniform key distribution.
+
+## Where It's Used
+
+| System | Use Case |
+|--------|---------|
+| **Amazon DynamoDB** | Partition key routing |
+| **Apache Cassandra** | Token ring |
+| **Memcached** (client-side) | Cache key routing |
+| **Nginx** | Upstream server selection |
+| **CDNs** | Cache node selection |
+
+## Properties
+
+- **Load balance**: $V \geq 100$ virtual nodes gives ≤5% load variance
+- **Monotone**: New node only takes keys from successors, never predecessors
+- **Minimal disruption**: $O(K/N)$ remapping on topology change

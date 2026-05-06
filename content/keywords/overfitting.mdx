@@ -1,0 +1,59 @@
+---
+title: "Overfitting"
+date: "2026-05-01"
+category: "machine-learning"
+description: "When a model learns the training data too well, capturing noise instead of the underlying signal."
+tags: ["machine-learning", "statistics", "data-science"]
+relatedTerms: ["regularization", "cross-validation", "bias-variance-tradeoff"]
+---
+
+## Definition
+
+**Overfitting** occurs when a model has too much capacity relative to the amount of training data, causing it to memorize training examples rather than learn generalizable patterns.
+
+The model performs well on training data but poorly on unseen test data.
+
+## The Bias-Variance Tradeoff
+
+$$
+\text{MSE}(\hat{f}) = \text{Bias}^2(\hat{f}) + \text{Var}(\hat{f}) + \sigma^2_\epsilon
+$$
+
+- **High bias** (underfitting): Model is too simple, can't capture the signal
+- **High variance** (overfitting): Model is too complex, captures noise
+
+## Detection
+
+```python
+from sklearn.model_selection import learning_curve
+import matplotlib.pyplot as plt
+import numpy as np
+
+train_sizes, train_scores, val_scores = learning_curve(
+    model, X, y, cv=5, n_jobs=-1
+)
+
+# If train_score >> val_score → overfitting
+print(f"Train: {train_scores.mean():.3f}, Val: {val_scores.mean():.3f}")
+```
+
+## Prevention Techniques
+
+| Technique | How It Helps |
+|-----------|-------------|
+| **Regularization** (L1/L2) | Penalizes large weights |
+| **Dropout** | Randomly zeroes neurons during training |
+| **Early Stopping** | Stop when validation loss stops improving |
+| **Data Augmentation** | Artificially increases training set size |
+| **Cross-validation** | Unbiased performance estimate |
+| **Simpler model** | Reduce capacity |
+
+## In Finance / Quant
+
+Overfitting is especially dangerous in backtesting:
+
+- **Strategy discovery**: With 1000 strategy variants tested, the best will have an inflated Sharpe purely by chance
+- **Multiple comparisons**: The expected maximum Sharpe from $N$ independent strategies is $O(\sqrt{\log N})$
+- **Harvey, Liu & Zhu (2016)**: Minimum required t-statistic for a new factor should be 3.0, not 2.0
+
+> "With enough parameters, you can fit an elephant." — John von Neumann

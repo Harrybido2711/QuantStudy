@@ -1,0 +1,70 @@
+---
+title: "Vector Database"
+date: "2026-05-01"
+category: "machine-learning"
+description: "A database optimized for storing and querying high-dimensional vector embeddings via approximate nearest neighbor search."
+tags: ["ai", "llm", "data-science", "systems"]
+relatedTerms: ["embedding", "rag", "faiss"]
+references:
+  - "Johnson, J. et al. (2019). Billion-scale similarity search with GPUs. IEEE TVLSI."
+  - "Malkov, Y. et al. (2018). Efficient and robust approximate nearest neighbor search using HNSW."
+---
+
+## What Is a Vector Database?
+
+A **vector database** stores data as high-dimensional numerical vectors (embeddings) and supports efficient **approximate nearest neighbor (ANN)** search — finding vectors most similar to a query vector.
+
+Unlike traditional databases optimized for exact match or range queries, vector databases are optimized for **semantic similarity**.
+
+## Key Operations
+
+```python
+import numpy as np
+
+# Cosine similarity (most common for embeddings)
+def cosine_sim(a: np.ndarray, b: np.ndarray) -> float:
+    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
+# L2 distance (Euclidean)
+def l2_dist(a: np.ndarray, b: np.ndarray) -> float:
+    return np.linalg.norm(a - b)
+```
+
+## Common Indexing Algorithms
+
+| Algorithm | Speed | Recall | Memory | Notes |
+|-----------|-------|--------|--------|-------|
+| **HNSW** | Very fast | High | High | Hierarchical graph, best general-purpose |
+| **IVF** | Fast | Medium | Low | Inverted file index, good for large scale |
+| **FLAT** | Slow | Exact | Medium | Brute force, ground truth |
+| **PQ** | Fast | Lower | Very Low | Product quantization, compressed |
+
+## HNSW (Hierarchical Navigable Small World)
+
+The dominant algorithm in production. Builds a multi-layer graph where:
+
+- **Upper layers**: sparse, long-range connections (highway network)
+- **Lower layers**: dense, short-range connections (local navigation)
+
+Query complexity: $O(\log N)$ expected.
+
+## Popular Systems
+
+| System | Type | Notes |
+|--------|------|-------|
+| **Pinecone** | Managed cloud | Easy to use, expensive at scale |
+| **Weaviate** | Open source | Rich metadata filtering |
+| **Qdrant** | Open source | Rust-based, fast |
+| **Chroma** | Open source | Lightweight, great for prototyping |
+| **pgvector** | Postgres extension | SQL + vectors, simpler stack |
+| **FAISS** | Library | Meta's library, building block |
+
+## Use in RAG Systems
+
+Vector databases are the retrieval backbone of **Retrieval-Augmented Generation (RAG)**:
+
+```
+Query → Embed → ANN Search → Top-K chunks → LLM context → Answer
+```
+
+The quality of retrieval directly determines answer quality — garbage in, garbage out.

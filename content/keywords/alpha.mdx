@@ -1,0 +1,58 @@
+---
+title: "Alpha"
+date: "2026-05-01"
+category: "finance"
+description: "Excess return above a benchmark or risk-adjusted expected return."
+tags: ["finance", "quant", "trading"]
+relatedTerms: ["beta", "sharpe-ratio", "information-ratio", "factor-model"]
+references:
+  - "Grinold, R. & Kahn, R. (2000). Active Portfolio Management."
+  - "Jensen, M. (1968). The Performance of Mutual Funds."
+---
+
+## Definition
+
+**Alpha** ($\alpha$) is the component of a portfolio or security's return that cannot be explained by exposure to systematic risk factors. It represents the **value added by active management** beyond passive factor exposure.
+
+$$
+\alpha = r_p - \left(r_f + \beta(r_m - r_f)\right)
+$$
+
+In a multi-factor context:
+
+$$
+\alpha_i = r_i - \sum_{k} \hat{\beta}_{ik} \hat{f}_k
+$$
+
+## Types of Alpha
+
+| Type | Description |
+|------|-------------|
+| **Jensen's Alpha** | CAPM-based excess return |
+| **Factor Alpha** | Return unexplained by all known factors |
+| **Portable Alpha** | Alpha extracted from one strategy, applied to another |
+| **Statistical Alpha** | Predictive edge from quantitative signals |
+
+## Why It Matters
+
+Alpha is the central question in active investing:
+
+- **Zero-sum game**: Before costs, aggregate alpha across all investors is zero
+- **After costs**: Most active managers destroy alpha through fees and transaction costs
+- **True alpha decays**: As a signal is discovered, arbitrage erodes its edge
+
+## Common Misconceptions
+
+- **High returns ≠ alpha**: A strategy that returns 20% in a bull market might have zero alpha after accounting for market beta
+- **Factor loading ≠ alpha**: Value investing captures the HML factor premium — this is risk compensation, not skill
+- **Short-term alpha ≠ sustainable alpha**: Overfitting to historical data produces spurious alpha
+
+## Relationship to Risk
+
+The **Information Ratio** measures alpha quality:
+
+$$
+IR = \frac{\alpha}{\text{TE}} = IC \cdot \sqrt{BR}
+$$
+
+Where TE is tracking error, IC is the Information Coefficient, and BR is the number of independent bets (breadth).

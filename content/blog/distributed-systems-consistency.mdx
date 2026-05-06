@@ -1,0 +1,116 @@
+---
+title: "Consistency Models in Distributed Systems: A Practical Guide"
+date: "2026-04-10"
+tags: ["systems", "distributed-systems", "data-analysis"]
+description: "From linearizability to eventual consistency — understanding the trade-offs that every distributed system engineer must navigate."
+---
+
+## The Core Problem
+
+In a distributed system, data lives on multiple nodes. When you write to node A and then read from node B, what do you see?
+
+The answer depends on the **consistency model** — a contract between the system and the application about what guarantees are provided.
+
+---
+
+## The CAP Theorem
+
+**CAP Theorem** (Brewer, 2000): A distributed system can guarantee at most **two** of:
+
+- **C**onsistency — every read sees the most recent write
+- **A**vailability — every request gets a non-error response
+- **P**artition Tolerance — the system continues despite network partitions
+
+Since network partitions are inevitable, real systems choose between **CP** (consistent but may refuse requests) and **AP** (available but may return stale data).
+
+> CAP is often oversimplified. The [PACELC model](https://en.wikipedia.org/wiki/PACELC_theorem) extends it: even without partitions, there's a latency vs. consistency trade-off.
+
+---
+
+## Consistency Levels (Strongest to Weakest)
+
+### 1. Linearizability (Strong Consistency)
+
+Every operation appears to take effect instantaneously at some point between its start and end. Reads always reflect the latest write.
+
+**Examples:** etcd, ZooKeeper, Google Spanner
+
+**Cost:** High latency (requires quorum coordination), reduced availability.
+
+### 2. Sequential Consistency
+
+All operations appear to execute in some sequential order consistent with each process's local order. Weaker than linearizability — no real-time constraint.
+
+### 3. Causal Consistency
+
+Operations that are causally related appear in the same order on all nodes. Concurrent operations may differ.
+
+```
+Process A: write(x=1) → write(y=2)
+Process B: read(x=1) → must see write(y=2) eventually
+Process C: read(y=2) → must see write(x=1)
+```
+
+### 4. Eventual Consistency
+
+If no new updates are made, eventually all replicas converge. No ordering guarantees. Highest availability.
+
+**Examples:** DynamoDB, Cassandra, CouchDB
+
+---
+
+## Read/Write Quorums
+
+In a system with $N$ replicas, define:
+- $W$ = write quorum (nodes that must acknowledge)
+- $R$ = read quorum (nodes that must respond)
+
+Strong consistency requires: $R + W > N$
+
+| $N$ | $W$ | $R$ | Consistency | Availability |
+|-----|-----|-----|-------------|-------------|
+| 3   | 3   | 1   | Strong      | Low         |
+| 3   | 2   | 2   | Strong      | Medium      |
+| 3   | 1   | 1   | Eventual    | High        |
+
+---
+
+## CRDTs: Eventual Consistency Without Conflicts
+
+**Conflict-free Replicated Data Types (CRDTs)** guarantee eventual consistency by design — any two nodes can merge their state and reach the same result, regardless of order.
+
+Classic examples:
+- **G-Counter**: increment-only counter
+- **OR-Set**: add/remove set with unique IDs
+- **LWW-Register**: Last-Write-Wins register
+
+```python
+class GCounter:
+    def __init__(self, node_id: str):
+        self.counts = {node_id: 0}
+        self.node_id = node_id
+
+    def increment(self):
+        self.counts[self.node_id] += 1
+
+    def value(self) -> int:
+        return sum(self.counts.values())
+
+    def merge(self, other: 'GCounter'):
+        for node, count in other.counts.items():
+            self.counts[node] = max(self.counts.get(node, 0), count)
+```
+
+---
+
+## Practical Choices
+
+| Use Case | Model | System |
+|----------|-------|--------|
+| Financial transactions | Linearizable | Postgres, Spanner |
+| Shopping cart | Causal/Eventual | DynamoDB |
+| Social media feed | Eventual | Cassandra |
+| Leader election | Linearizable | etcd/ZooKeeper |
+| Analytics | Eventual | ClickHouse |
+
+**Rule of thumb:** Start with strong consistency. Relax only when you can prove availability or latency requirements demand it.

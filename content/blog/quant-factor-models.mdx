@@ -1,0 +1,113 @@
+---
+title: "Factor Models in Quantitative Finance: From CAPM to Multi-Factor"
+date: "2026-04-20"
+tags: ["quant", "finance", "trading", "statistics"]
+description: "Understanding how factor models explain asset returns — from single-factor CAPM to Barra's multi-factor risk models."
+---
+
+## What Is a Factor Model?
+
+A factor model decomposes asset returns into **systematic** (factor-driven) and **idiosyncratic** components:
+
+$$
+r_i = \alpha_i + \sum_{k=1}^{K} \beta_{ik} f_k + \epsilon_i
+$$
+
+Where:
+- $r_i$ = return of asset $i$
+- $\alpha_i$ = alpha (abnormal return)
+- $\beta_{ik}$ = factor loading (exposure)
+- $f_k$ = factor return
+- $\epsilon_i$ = idiosyncratic residual, $\mathbb{E}[\epsilon_i] = 0$
+
+The key assumption: $\text{Cov}(\epsilon_i, \epsilon_j) = 0$ for $i \neq j$.
+
+---
+
+## CAPM: The Single-Factor Model
+
+The Capital Asset Pricing Model (CAPM) is the simplest factor model with one factor — the market:
+
+$$
+\mathbb{E}[r_i] - r_f = \beta_i (\mathbb{E}[r_m] - r_f)
+$$
+
+Where $\beta_i = \frac{\text{Cov}(r_i, r_m)}{\text{Var}(r_m)}$.
+
+**Empirical failures of CAPM:**
+- Small-cap premium (Banz, 1981)
+- Value premium (Fama-French, 1992)
+- Momentum (Jegadeesh-Titman, 1993)
+- Low volatility anomaly
+
+---
+
+## Fama-French Three-Factor Model
+
+Fama and French added two factors to explain the small-cap and value premia:
+
+$$
+r_i - r_f = \alpha + \beta_\text{mkt} (r_m - r_f) + \beta_\text{SMB} \cdot SMB + \beta_\text{HML} \cdot HML + \epsilon
+$$
+
+| Factor | Name | Construction |
+|--------|------|-------------|
+| MKT    | Market | $r_m - r_f$ |
+| SMB    | Small Minus Big | Small-cap returns − Large-cap returns |
+| HML    | High Minus Low | High B/M − Low B/M returns |
+
+The **five-factor model** (2015) adds **RMW** (Robust Minus Weak profitability) and **CMA** (Conservative Minus Aggressive investment).
+
+---
+
+## Barra-Style Risk Models
+
+In practice, risk models like MSCI Barra decompose portfolio variance:
+
+$$
+\text{Var}(r_p) = \mathbf{x}^T (BFB^T + \Delta) \mathbf{x}
+$$
+
+Where:
+- $\mathbf{x}$ = portfolio weights
+- $B$ = factor exposure matrix ($N \times K$)
+- $F$ = factor covariance matrix ($K \times K$)
+- $\Delta$ = diagonal idiosyncratic variance matrix
+
+This allows portfolio managers to **attribute risk** to specific factors.
+
+```python
+import numpy as np
+
+def portfolio_risk(weights, B, F, delta):
+    """Compute portfolio variance via factor model."""
+    factor_var = weights @ B @ F @ B.T @ weights
+    idio_var = weights @ np.diag(delta) @ weights
+    return factor_var + idio_var
+```
+
+---
+
+## Alpha vs Risk Factors
+
+The crucial distinction in quant finance:
+
+**Risk factors** explain cross-sectional return differences as compensation for bearing systematic risk. **Alpha** is return above and beyond risk factor exposure — the holy grail.
+
+$$
+\alpha_i = r_i - \sum_k \hat{\beta}_{ik} \hat{f}_k
+$$
+
+A common mistake is confusing **factor exposure** (beta) with **alpha**. Value investing isn't alpha if you're just loading on HML.
+
+---
+
+## Information Ratio
+
+The quality of an alpha signal is measured by the **Information Ratio**:
+
+$$
+IR = \frac{\mathbb{E}[\alpha]}{\sigma(\alpha)} = IC \cdot \sqrt{N}
+$$
+
+Where $IC$ is the Information Coefficient (correlation between predicted and realized returns) and $N$ is the number of independent bets. This is the **Fundamental Law of Active Management** (Grinold, 1989).

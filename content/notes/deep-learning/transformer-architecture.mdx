@@ -1,0 +1,67 @@
+---
+title: "Transformer Architecture"
+date: "2026-05-01"
+tags: ["deep-learning", "llm", "ai"]
+description: "The self-attention mechanism and transformer block structure that powers modern LLMs."
+---
+
+## Overview
+
+The Transformer (Vaswani et al., 2017) replaced RNNs for sequence modeling by relying entirely on **attention mechanisms**, enabling parallelization and long-range dependency capture.
+
+## Self-Attention
+
+Given input sequence $X \in \mathbb{R}^{n \times d}$:
+
+$$
+Q = XW^Q, \quad K = XW^K, \quad V = XW^V
+$$
+
+$$
+\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right) V
+$$
+
+The $\frac{1}{\sqrt{d_k}}$ scaling prevents dot products from growing too large in high dimensions, which would push softmax into saturated regions with near-zero gradients.
+
+## Multi-Head Attention
+
+Run $h$ attention heads in parallel, each with its own learned projections:
+
+$$
+\text{MultiHead}(Q, K, V) = \text{Concat}(\text{head}_1, \ldots, \text{head}_h) W^O
+$$
+
+Each head can attend to different representation subspaces. In practice, $h = 32$ for 7B models, $h = 64$ for 70B.
+
+## Transformer Block
+
+```
+x → LayerNorm → Multi-Head Attention → Residual Add
+  → LayerNorm → Feed-Forward Network → Residual Add → output
+```
+
+The **FFN** is typically 4× wider than the model dimension:
+
+$$
+\text{FFN}(x) = \text{GeLU}(xW_1 + b_1) W_2 + b_2
+$$
+
+## Modern Variants
+
+| Modification | Where Used | Effect |
+|-------------|-----------|--------|
+| RoPE (Rotary Position Embedding) | LLaMA, Gemma | Better position generalization |
+| GQA (Grouped Query Attention) | LLaMA-3, Mistral | Faster inference, less KV cache |
+| SwiGLU activation | LLaMA | Better than GeLU empirically |
+| RMSNorm | LLaMA | Faster than LayerNorm, same quality |
+| Flash Attention | All modern LLMs | IO-efficient attention, 2-4× faster |
+
+## Parameter Count
+
+For a transformer with $L$ layers, hidden dim $d$, FFN dim $4d$, heads $h$:
+
+$$
+\text{Params} \approx L \left(4d^2 + 8d^2\right) = 12Ld^2
+$$
+
+For LLaMA-3 7B: $L=32$, $d=4096$ → $12 \times 32 \times 4096^2 \approx 6.4\text{B}$. The vocabulary embedding adds ~$500$M.
